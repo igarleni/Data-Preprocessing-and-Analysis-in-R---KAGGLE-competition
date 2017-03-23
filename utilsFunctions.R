@@ -30,7 +30,10 @@ writeKAGGLEData <- function(results)
 ## missing values' imputation ##
 ################################
 
+#########################
 #Delete missing Values with a minPercent of NA
+#########################
+
 # minPercent = 5 as default
 deleteNA <- function(dataset, minPercent)
 {
@@ -40,16 +43,40 @@ deleteNA <- function(dataset, minPercent)
   return(filteredInstances)
 }
 
+###########
 #MICE data imputation
+###########
+
+#get imputed data
 #methodC = "pmm" | "mean" | ... (see methods(mice))
-miceImputation <- function(dataset, methodC)
+getMiceImputation <- function(dataset, methodC, interestVariable)
 {
   pattern <- mice::md.pattern(x = dataset)
   imputed <- mice::mice(datos, m=5, method = methodC)
+  return(imputed)
+}
+#generate imputed dataset
+imputeMice <- function(imputed)
+{
   imputedData <- mice::complete(imputed)
   return(imputedData)
 }
-#watch sample script imputationMice.r for plotting results
+
+#Imputed mice data visualization
+# library(lattice)
+
+#Show imputation of a variable
+# imputed$imp$var1
+
+#Graphic plot to compare Var1 distribution vs other variables
+# lattice::xyplot(imputed,var1 ~ var2+var3+var4,pch=18,cex=1)
+
+#Density plot of imputed data vs not imputed
+# lattice::densityplot(imputed)
+
+#Barplot of imputed data
+# lattice::bwplot(imputed)
+
 
 
 #########################
