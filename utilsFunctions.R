@@ -1,20 +1,21 @@
 #
+library(ggplot2)
+library(Hmisc)
+library(mice)
 
 #########
 ## I/O ##
 #########
 #Data test and training readers
-library(readr)
 readDataTrain <- function()
 {
-  dataset <- read_csv("accidentes-kaggle.csv")
+  dataset <- read.csv("accidentes-kaggle.csv", dec = ",")
   return(dataset)
 }
 
 readDataTest <- function()
 {
-  library(readr)
-  dataset <- read_csv("accidentes-kaggle-test.csv")
+  dataset <- read.csv("accidentes-kaggle-test.csv", dec = ",")
   return(dataset)
 }
 
@@ -25,11 +26,41 @@ writeKAGGLEData <- function(results)
 }
 
 
+################################
+## missing values' imputation ##
+################################
+
+#Delete missing Values with a minPercent of NA
+# minPercent = 5 as default
+deleteNA <- function(dataset, minPercent)
+{
+  percentNA <- apply (dataset, 1, function(x) sum(is.na(x))) / ncol(dataset) * 100
+  badInstances <- (percentNA > minPercent)
+  filteredInstances <- dataset[!badInstances,]
+  return(filteredInstances)
+}
+
+#MICE data imputation
+#methodC = "pmm" | "mean" | ... (see methods(mice))
+miceImputation <- function(dataset, methodC)
+{
+  pattern <- mice::md.pattern(x = dataset)
+  imputed <- mice::mice(datos, m=5, method = methodC)
+  imputedData <- mice::complete(imputed)
+  return(imputedData)
+}
+#watch sample script imputationMice.r for plotting results
+
+
+#########################
+## Anomalies detection ##
+#########################
+
+
+
 ###################
 ## Visualization ##
 ###################
-library(ggplot2)
-
 #Var1 vs Var2
 simpleVisualization <- function(dataset, var1, var2)
 {
@@ -82,21 +113,6 @@ classVariableVisualization <- function(dataset, var, class)
 
 
 
-################################
-## missing values' imputation ##
-################################
-
-
-
-#########################
-## Anomalies detection ##
-#########################
-
-
-
-#########################
-## Data transformation ##
-#########################
 
 
 
