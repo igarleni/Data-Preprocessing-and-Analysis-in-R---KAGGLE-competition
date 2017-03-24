@@ -2,10 +2,15 @@
 library(ggplot2)
 library(Hmisc)
 library(mice)
+library(VIM)
+library(robCompositions)
+library(outliers)
+library(NoiseFiltersR)
 
 #########
 ## I/O ##
 #########
+
 #Data test and training readers
 readDataTrain <- function()
 {
@@ -26,13 +31,42 @@ writeKAGGLEData <- function(results)
 }
 
 
+
 ################################
 ## missing values' imputation ##
 ################################
 
-#########################
+#########
+## Visualization
+#########
+
+#VIM for NA distribution and pattern
+visualizeVIM <- function(dataset)
+{
+  aggr_plot <- VIM::agrr(dataset, col = c ('blue','red'), numbers = T,
+                         sortVars = T, labels = names(dataset), cex.axis= .5,
+                         gap = 1, ylab = c("NA Graphic", "Pattern"))
+  return (aggr_plot)
+}
+
+#NA var1 vs NA var2
+NAconfrontation <- function(dataset, var1, var2)
+{
+  VIM::marginplot(dataset[,var1],dataset[,var2])
+}
+
+#mice for incomplete vs complete
+visualizeMice <- function(dataset)
+{
+  complete <- mice::ccn(dataset)
+  complete
+  incomplete <- mice::icn(dataset)
+  incomplete
+}
+
+####################
 #Delete missing Values with a minPercent of NA
-#########################
+####################
 
 # minPercent = 5 as default
 deleteNA <- function(dataset, minPercent)
@@ -49,9 +83,8 @@ deleteNA <- function(dataset, minPercent)
 
 #get imputed data
 #methodC = "pmm" | "mean" | ... (see methods(mice))
-getMiceImputation <- function(dataset, methodC, interestVariable)
+getMiceImputation <- function(dataset, methodC)
 {
-  pattern <- mice::md.pattern(x = dataset)
   imputed <- mice::mice(datos, m=5, method = methodC)
   return(imputed)
 }
@@ -72,22 +105,71 @@ imputeMice <- function(imputed)
 # lattice::xyplot(imputed,var1 ~ var2+var3+var4,pch=18,cex=1)
 
 #Density plot of imputed data vs not imputed
-# lattice::densityplot(imputed)
+# lattice::densxityplot(imputed)
 
-#Barplot of imputed data
-# lattice::bwplot(imputed)
+#Barplot ofimputed data
+# lattice::wplot(imputed)
+
+#############
+## robCompositions imputation
+#############
+
+getRobImputation <- function(dataset)
+{
+  imputed <- robCompositions::impKNNa(dataset)
+  return(imputed)
+}
+#plot ( imputed , which=2)
 
 
 
-#########################
-## Anomalies detection ##
-#########################
+#################################
+## Anomalies and noise dection ##
+#################################
+
+########
+## Library outliers
+########
+
+#this method considers only one variable, not its interaction with other variables.
+# It analyze the variable looking for deviations.
+outliersAnomalies <- function(dataset, columns)
+{
+  anomalies <- outlier(dataset[,columns])
+  return(anomalies)
+}
+##visualize var1 mean and distribution
+#mean(dataset[,var1])
+#ggplot(data = dataset) + geum_bar(mapping = aes(x = var1))
+
+#########
+## Library mvoutlier
+#########
+
+mvoutlierAnomalies <- function(dataset)
+{
+  anomalies <- uni.plot(dataset)
+  anomalies.final <- anomalies$outliers
+  return(anomalies.final)
+}
+
+###########
+## library NoiseFiltersR
+###########
+
+noiseFilter <- function(dataset, class)
+{
+  noise <- IPF(dataset[,class]-., data = dataset, s = 2)
+  return (noise)
+}
+#identical(noise$cleanData, dataset[setdiff(1:nrow(dataset), out$remIdx),])
 
 
 
 ###################
 ## Visualization ##
 ###################
+
 #Var1 vs Var2
 simpleVisualization <- function(dataset, var1, var2)
 {
@@ -134,13 +216,17 @@ classVariableVisualization <- function(dataset, var, class)
 }
 
 
-###################
-## Data overview ##
-###################
+
+#######################################
+## Classification methods with 10CFV ##
+#######################################
 
 
 
+###############################
+## Performance meassurements ##
+###############################
 
-
-
-#
+#recall = TP/(TP+FN)
+#specificity = TN/(TN+FP)
+#accuracy = TP/(TP+FP)
