@@ -55,47 +55,47 @@ NAconfrontation <- function(dataset, var1, var2)
   VIM::marginplot(dataset[,var1],dataset[,var2])
 }
 
-#mice for incomplete vs complete
-visualizeMice <- function(dataset)
+#count NA values
+countNA <- function(dataset)
 {
-  complete <- mice::ccn(dataset)
-  complete
-  incomplete <- mice::icn(dataset)
-  incomplete
+  n <- dim(trainData)
+  NAvalues <- c(colnames(dataset))
+  NAvalues <- cbind(NAvalues,c(1:n[2]))
+  for (i in 1:n[2])
+  {
+    NAvalues[i,2] <- sum(is.na(dataset[i]))
+  }
+  return(NAvalues)
 }
+
 
 ####################
 #Delete missing Values with a minPercent of NA
 ####################
 
-# minPercent = 5 as default
+# minPercent = percent of NA on item
 deleteNA <- function(dataset, minPercent)
 {
   percentNA <- apply (dataset, 1, function(x) sum(is.na(x))) / ncol(dataset) * 100
   badInstances <- (percentNA > minPercent)
+  cat(sum(badInstances), "deleted instances with more than", minPercent,"% NA values.")
   filteredInstances <- dataset[!badInstances,]
   return(filteredInstances)
 }
+
 
 ###########
 #MICE data imputation
 ###########
 
-#get imputed data
+##get imputed data
 #methodC = "pmm" | "mean" | ... (see methods(mice))
-getMiceImputation <- function(dataset, methodC)
-{
-  imputed <- mice::mice(datos, m=5, method = methodC)
-  return(imputed)
-}
-#generate imputed dataset
-imputeMice <- function(imputed)
-{
-  imputedData <- mice::complete(imputed)
-  return(imputedData)
-}
+#  imputed <- mice::mice(dataset, m=5, method = methodC)
 
-#Imputed mice data visualization
+##generate imputed dataset
+#  imputedData <- mice::complete(imputed)
+
+##Imputed mice data visualization
 # library(lattice)
 
 #Show imputation of a variable
@@ -110,16 +110,14 @@ imputeMice <- function(imputed)
 #Barplot ofimputed data
 # lattice::wplot(imputed)
 
+
 #############
 ## robCompositions imputation
 #############
 
-getRobImputation <- function(dataset)
-{
-  imputed <- robCompositions::impKNNa(dataset)
-  return(imputed)
-}
-#plot ( imputed , which=2)
+#  imputed <- robCompositions::impKNNa(dataset)
+#  imputados$xImp
+#  plot ( imputed , which=2)
 
 
 
