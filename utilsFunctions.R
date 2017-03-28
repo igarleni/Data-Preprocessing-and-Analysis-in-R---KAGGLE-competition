@@ -5,6 +5,7 @@ library(mice)
 library(VIM)
 library(robCompositions)
 library(outliers)
+library(mvoutlier)
 library(NoiseFiltersR)
 
 #########
@@ -146,21 +147,64 @@ outliersAnomalies <- function(dataset, columns)
 
 mvoutlierAnomalies <- function(dataset)
 {
+  require(mvoutlier)
   anomalies <- uni.plot(dataset)
   anomalies.final <- anomalies$outliers
   return(anomalies.final)
 }
+#dataset <- dataset[!anomalies.final, ]
 
 ###########
 ## library NoiseFiltersR
 ###########
 
-noiseFilter <- function(dataset, class)
-{
-  noise <- IPF(dataset[,class]-., data = dataset, s = 2)
-  return (noise)
-}
-#identical(noise$cleanData, dataset[setdiff(1:nrow(dataset), out$remIdx),])
+# set.seed(1)
+# noise <- IPF(class~., data = dataset, s = 2)
+# identical(noise$cleanData, dataset[setdiff(1:nrow(dataset), out$remIdx),])
+
+
+
+###############################################
+## Variable selection ##
+########################
+
+############
+## Approximation filters
+############
+
+##chi.squared
+
+##Correlation
+
+##Entrop
+
+##oneR
+
+##relief
+
+
+############
+## Approximation wrapper
+############
+
+##best.first.search
+
+##exhaustive.search
+
+##greedy.search
+
+##hill.climbing.search
+
+##cfs
+
+##consistency
+
+
+############
+## Approximation embedded
+############
+
+##random.forest.importance
 
 
 

@@ -32,3 +32,10 @@ for (i in 1:ncol(trainData))
 
 ##Save imputed data (for future uses)
 write.csv(trainData, "imputedData.csv", row.names = F)
+
+#
+source("utilsFunctions.R")
+
+##Read imputed data (for future uses)
+trainData <- read.csv("imputedData.csv")
+
