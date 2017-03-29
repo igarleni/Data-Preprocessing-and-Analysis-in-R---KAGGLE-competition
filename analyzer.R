@@ -80,14 +80,16 @@ for(i in 1:5){
   testPartitions[[i]] <- indexes[-trainPartitions[[i]]]
 }
 
+#Test1
 model <- randomForest::randomForest(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
                                       ZONA_AGRUPADA * ZONA * TIPO_VIA, data=trainDataImputed,
                                     ntree=100)
-kagglePrediction <- predict(model, newdata = testData[, -1])
+kagglePrediction <- predict(model, newdata = testData)
+#0.81930
 
-kagglePrediction <- cbind(1:length(kagglePrediction),kagglePrediction)
-colnames(kagglePrediction) <- c("Id","Prediccion")
-write.csv(kagglePrediction, "kagglePrediction.csv", row.names = F, quote = F)
+#Test 2
+
+
 
 writeKAGGLEData(kagglePrediction)
 

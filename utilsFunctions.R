@@ -35,9 +35,7 @@ readDataTest <- function()
 #KAGGLE output generator
 writeKAGGLEData <- function(results)
 {
-  results <- cbind(1:length(results),results)
-  results <- rbind(c("Id","Prediccion"))
-  write.csv(results, "kagglePrediction.csv", row.names = F, quote = F)
+  write.csv(results, "kagglePrediction.csv", quote = F)
 }
 
 
