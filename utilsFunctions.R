@@ -343,7 +343,7 @@ classificationTree <- function(dataset, kaggleTest, trainPartitions, testPartiti
   #Algorithm
   n <- ncol(dataset)
   variableClass <- names(dataset)[n]
-  formulaClass <- as.formula(paste(variableClass,"~TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * CARRETERA * ZONA * TIPO_VIA",sep=""))
+  formulaClass <- as.formula(paste(variableClass,"~TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA * TIPO_VIA",sep=""))
   for(i in 1:5){
     #generate model
     model <- ctree(formulaClass, dataset[trainPartitions[[i]], ])
@@ -373,7 +373,8 @@ baggingAlgorithm <- function(dataset, kaggleTest, trainPartitions, testPartition
   #Algorithm
   for(i in 1:5){
     #generate model
-    model <- adabag::bagging(TIPO_ACCIDENTE ~ ., 
+    model <- adabag::bagging(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
+                               ZONA_AGRUPADA * ZONA * TIPO_VIA, 
                              data = dataset[trainPartitions[[i]], ], 
                              control=rpart::rpart.control(maxdepth=maxdp, minsplit=minsplt))
     #predict over test fold
@@ -385,7 +386,8 @@ baggingAlgorithm <- function(dataset, kaggleTest, trainPartitions, testPartition
   accuracy <- mean(hits/(errors+hits))
   cat("Accuracy:", accuracy)
   #Predict on KAGGLE test data
-  model <- adabag::bagging(TIPO_ACCIDENTE ~ ., data = dataset, 
+  model <- adabag::bagging(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
+                             ZONA_AGRUPADA * ZONA * TIPO_VIA, data = dataset, 
                            control=rpart::rpart.control(maxdepth=maxdp, minsplit=minsplt))
   baggingPrediction <- adabag::predict.bagging(model, newdata = as.data.frame(kaggleTest[, -1]))
   kagglePrediction <- baggingPrediction$class
@@ -404,7 +406,8 @@ boostingAlgorithm <- function(dataset, kaggleTest, trainPartitions, testPartitio
   #Algorithm
   for(i in 1:5){
     #generate model
-    model <- adabag::boosting(TIPO_ACCIDENTE ~ ., 
+    model <- adabag::boosting(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
+                                ZONA_AGRUPADA * ZONA * TIPO_VIA, 
                               data = dataset[trainPartitions[[i]], ],
                               mfinal = finalm, 
                               control = rpart::rpart.control(maxdepth = maxdp))
@@ -417,7 +420,8 @@ boostingAlgorithm <- function(dataset, kaggleTest, trainPartitions, testPartitio
   accuracy <- mean(hits/(errors+hits))
   cat("Accuracy:", accuracy)
   #Predict on KAGGLE test data
-  model <- adabag::boosting(TIPO_ACCIDENTE ~ ., data = dataset, mfinal = finalm, 
+  model <- adabag::boosting(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
+                              ZONA_AGRUPADA * ZONA * TIPO_VIA, data = dataset, mfinal = finalm, 
                             control = rpart::rpart.control(maxdepth = maxdp))
   boostingPrediction <- adabag::predict.boosting(model, newdata = as.data.frame(kaggleTest[, -1]))
   kagglePrediction <- boostingPrediction$class
@@ -461,7 +465,8 @@ SVMalgorithm <- function(dataset, kaggleTest, trainPartitions, testPartitions)
   #Algorithm
   for(i in 1:5){
     #generate model
-    model <- train(TIPO_ACCIDENTE ~ ., data = dataset[testPartitions[[i]], ], method = "svmRadial",
+    model <- train(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
+                     ZONA_AGRUPADA * ZONA * TIPO_VIA, data = dataset[testPartitions[[i]], ], method = "svmRadial",
                    preProc = c("center", "scale"))
     #predict over test fold
     predictions <- predict(model, newdata = dataset[testPartitions[[i]], -n])
