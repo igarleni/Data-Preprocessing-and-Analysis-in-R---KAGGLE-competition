@@ -1,189 +1,134 @@
 #
-source("utilsFunctions.R")
+
+#Clear workspace
+rm(list = ls())
 
 ##Read files
-trainData <- readDataTrain()
-testData <- readDataTest()
+source("DataReader.R")
 
 
 ##################
 ## NA treatment ##
 ##################
+source("NAprocessing.R")
+#Imputed data is now saved on 2 different csv's and in testDataImputed/trainDataImputed variable
 
-##get NA count
-NAvalues <- countNA(trainData)
-NAvaluesTest <- countNA(testData)
-
-##Delete items with a min of 40% of NA variables
-trainData <- deleteNA(trainData, 40)
-
-##Impute data with MICE
-# All variables to impute are Factor, so MICE is the best way to impute them
-# There are too many data, so we have to impute them 1 by 1
-for (i in 1:ncol(trainData))
-{
-  if(NAvalues[i,2] != 0)
-  {
-    cat("Imputing variable", NAvalues[i,1], "...")
-    imputed <- mice::mice(trainData[,1:i], m=5, method = "pmm")
-    imputedData <- mice::complete(imputed)
-    trainData[,i] <- imputedData[,i]
-  }
-}
-
-for (i in 1:ncol(testData))
-{
-  if(NAvaluesTest[i,2] != 0)
-  {
-    cat("Imputing variable", NAvaluesTest[i,1], "...")
-    imputedTest <- mice::mice(testData[,1:i], m=5, method = "pmm")
-    imputedDataTest <- mice::complete(imputedTest)
-    testData[,i] <- imputedDataTest[,i]
-  }
-}
-write.csv(testData, "imputedDataTest.csv", row.names = F)
-
-##Save imputed data (for future uses)
-write.csv(trainData, "imputedData.csv", row.names = F)
 
 ########################
 ## Variable selection ##
 ########################
-
-weightchiSquared <- filterSelection(trainData,"chiSquared")
-weightentropInfo <- filterSelection(trainData,"entropInfo")
-weightentropInfoRatio <- filterSelection(trainData,"entropInfoRatio")
-weightentropSymm <- filterSelection(trainData,"entropSymm")
-
-final.weight <- (weightchiSquared + weightentropInfo + weightentropInfoRatio + weightentropSymm)/4
-
-final.weight.ordered <- cbind(final.weight, rownames(final.weight))
-final.weight.ordered <- final.weight.ordered[order(final.weight, decreasing = T),]
-
+source("VariableSelection.R")
 final.weight.ordered
-
 ###variables selected:
 # TOT_VEHICULOS_IMPLICADOS, ZONA_AGRUPADA, CARRETERA, ZONA, TIPO_VIA, TRAZADO_NO_INTERSEC,
 # RED_CARRETERA, ACERAS
+idClass <- length(names(trainData))
+classVariable <- names(trainData)[idClass]
+formulaClassSelected <- as.formula(paste(classVariable, "~ TOT_VEHICULOS_IMPLICADOS + ZONA_AGRUPADA +
+                                         CARRETERA + ZONA + TIPO_VIA + TRAZADO_NO_INTERSEC + RED_CARRETERA
+                                         + ACERAS", sep = ""))
+formulaClassAll <- as.formula(paste(classVariable, "~.", sep = ""))
+#choose between variable selection or full variables
+formulaClass <- formulaClassAll
 
 
-
-
-#Reset workspace
-
-
-
-#
-source("utilsFunctions.R")
-
+###############################
+## Classification algorithms ##
+###############################
+#Clear workspace for using imputedData use (impute data takes too long to do on each model generation)
+rm(list = ls())
 ##Read imputed data (for future uses)
 trainDataImputed <- read.csv("imputedData.csv")
 testDataImputed <- read.csv("imputedDataTest.csv")
 
-##############################
-## Classification algorithm ##
-
 
 ##5 cross fold validation setup
-indexes <- seq(1,nrow(trainDataImputed),by=1)
-trainPartitions <- createFolds(indexes, k = 5,
-                               returnTrain = TRUE)
-testPartitions <- list()
-for(i in 1:5){
-  testPartitions[[i]] <- indexes[-trainPartitions[[i]]]
-}
+source("CrossFoldSetup.R")
+idClass <- length(names(trainDataImputed))
+classVariable <- names(trainDataImputed)[idClass]
+#use function getAccuracy(errors,hits) to get model's accuracy
 
 #Test1
-model <- randomForest::randomForest(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
-                                      ZONA_AGRUPADA * ZONA * TIPO_VIA, data=trainDataImputed,
-                                    ntree=2000)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.81930
+formulaClass <- as.formula(paste(classVariable, "~ TOT_VEHICULOS_IMPLICADOS * 
+                                      ZONA_AGRUPADA * ZONA * TIPO_VIA", sep = ""))
+ntrees <- 100
+source("RandomForest.R")
+#Accuracy on 10cfv -> 0.8203448
+#Accuracy on KAGGLE -> 0.81930
 
 #Test 2
-model <- randomForest::randomForest(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * 
-                                      ZONA_AGRUPADA * ZONA * TIPO_VIA, data=trainDataImputed,
-                                    ntree=2000)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.81930
+formulaClass <- as.formula(paste(classVariable, "~ TOT_VEHICULOS_IMPLICADOS * 
+                                      ZONA_AGRUPADA * ZONA * TIPO_VIA", sep = ""))
+ntrees <- 2000
+source("RandomForest.R")
+#Accuracy on 10cfv -> 0.8202781
+#Accuracy on KAGGLE -> 0.81930
 
 #Test 3
-trainDataImputed.randomForest <- trainDataImputed[,-15]
-testData.randomForest <- testDataImputed[,-15]
-
-model <- randomForest::randomForest(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC *
-                                     RED_CARRETERA * ACERAS, data=trainDataImputed.randomForest,
-                                     ntree=500)
-kagglePrediction <- predict(model, newdata = testData.randomForest)
-#0.82158
+formulaClass <- as.formula(paste(classVariable, "~ TOT_VEHICULOS_IMPLICADOS * 
+                                 ZONA_AGRUPADA * ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC
+                                 * RED_CARRETERA * ACERAS", sep = ""))
+ntrees <- 500
+source("RandomForest.R")
+#Accuracy on 10cfv -> 0.8216112
+#Accuracy on KAGGLE -> 0.82158
 
 #Test 4
-model <- randomForest::randomForest(TIPO_ACCIDENTE ~. -CARRETERA - ISLA - MEDIDAS_ESPECIALES, data=trainDataImputed,
-                                     ntree=500)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.82859
+formulaClass <- as.formula(paste(classVariable, "~. -CARRETERA - ISLA - MEDIDAS_ESPECIALES", sep = ""))
+ntrees <- 500
+source("RandomForest.R")
+#Accuracy on 10cfv -> 
+#Accuracy on KAGGLE -> 0.82859
 
 #Test 5
-n <- ncol(trainDataImputed)
-variableClass <- names(trainDataImputed)[n]
-formulaClass <- as.formula(paste(variableClass,"~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC",sep=""))
-model <- ctree(formulaClass, trainDataImputed)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.81891
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA *
+                                 ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC",sep=""))
+source("CicTree.R")
+#Accuracy on 10cfv -> 0.8214445
+#Accuracy on KAGGLE -> 0.81891
 
 #Test 6
-n <- ncol(trainDataImputed)
-variableClass <- names(trainDataImputed)[n]
-formulaClass <- as.formula(paste(variableClass,"~TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA*ZONA *TIPO_VIA *TRAZADO_NO_INTERSEC* RED_CARRETERA*ACERAS *PRIORIDAD *TIPO_INTERSEC *PROVINCIA * TOT_HERIDOS_LEVES * SUPERFICIE_CALZADA ",sep=""))
-model <- ctree(formulaClass, trainDataImputed)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.82573
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA*ZONA
+                                 * TIPO_VIA * TRAZADO_NO_INTERSEC * RED_CARRETERA*ACERAS *
+                                 PRIORIDAD *TIPO_INTERSEC *PROVINCIA * TOT_HERIDOS_LEVES *
+                                 SUPERFICIE_CALZADA ",sep=""))
+source("CicTree.R")
+#Accuracy on 10cfv -> 0.8250111
+#Accuracy on KAGGLE -> 0.82573
 
 #Test 7
 maxdp = 2
 finalm = 10
-model <- adabag::boosting(TIPO_ACCIDENTE ~
-                            TOT_VEHICULOS_IMPLICADOS + 
-                            ZONA_AGRUPADA + 
-                            ZONA + 
-                            TIPO_VIA +
-                            TRAZADO_NO_INTERSEC +
-                            RED_CARRETERA,
-                          data = trainDataImputed, mfinal = finalm, 
-                          control = rpart::rpart.control(maxdepth = maxdp))
-boostingPrediction <- adabag::predict.boosting(model, newdata = as.data.frame(testDataImputed))
-kagglePrediction <- boostingPrediction$class
-#0.81891
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS + ZONA_AGRUPADA + ZONA +
+                                  TIPO_VIA + TRAZADO_NO_INTERSEC + RED_CARRETERA",sep=""))
+source("Boosting.R")
+#Accuracy on 10cfv -> 0.8191449
+#Accuracy on KAGGLE -> 0.81891
 
 #Test 8
-library(party)
-library(caret)
-variableClass <- names(trainDataImputed)[30]
-formulaClass <- as.formula(paste(variableClass, "~TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC * RED_CARRETERA"))
-model <- ctree(formulaClass, trainDataImputed)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.81891
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA *
+                                 TIPO_VIA * TRAZADO_NO_INTERSEC * RED_CARRETERA"))
+source("CicTree.R")
+#Accuracy on 10cfv -> 0.8214445
+#Accuracy on KAGGLE -> 0.81891
 
 #Test 9
-model <- randomForest::randomForest(TIPO_ACCIDENTE ~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA * TIPO_VIA * TRAZADO_NO_INTERSEC * RED_CARRETERA, data=trainDataImputed, ntree=500)
-kagglePrediction <- predict(model, newdata = testDataImputed)
-#0.81930
+ntrees <- 500
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS * ZONA_AGRUPADA * ZONA *
+                                 TIPO_VIA * TRAZADO_NO_INTERSEC * RED_CARRETERA"))
+source("RandomForest.R")
+#Accuracy on 10cfv -> 0.8209446
+#Accuracy on KAGGLE -> 0.81930
 
 #Test 10
 maxdp = 5
 minsplt = 15
-model <- adabag::bagging(TIPO_ACCIDENTE ~ 
-                           TOT_VEHICULOS_IMPLICADOS + 
-                           ZONA_AGRUPADA + 
-                           ZONA + 
-                           TIPO_VIA +
-                           TRAZADO_NO_INTERSEC +
-                           RED_CARRETERA,
-                         data = trainDataImputed, 
-                         control=rpart::rpart.control(maxdepth=maxdp, minsplit=minsplt))
-baggingPrediction <- adabag::predict.bagging(model, newdata = testDataImputed)
-kagglePrediction <- baggingPrediction$class
-#0.81891
+formulaClass <- as.formula(paste(variableClass, "~ TOT_VEHICULOS_IMPLICADOS + ZONA_AGRUPADA + ZONA + 
+                                 TIPO_VIA + TRAZADO_NO_INTERSEC + RED_CARRETERA"))
+source("Bagging.R")
+#Accuracy on 10cfv -> 0.8191449
+#Accuracy on KAGGLE -> 0.81891
 
-#write data
-writeKAGGLEData(kagglePrediction)
+
+#Generate KAGGLE output
+write.csv(results, "kagglePrediction.csv", quote = F)
