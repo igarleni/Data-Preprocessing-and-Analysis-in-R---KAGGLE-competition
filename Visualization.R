@@ -50,3 +50,11 @@ classVariableVisualization <- function(dataset, var, class)
     geom_boxplot() +
     coord_flip()
 }
+
+#plot all vs class variable
+#temp <- dataset
+plotY<-function (x) {
+  hist(temp[,x], main = names(temp)[x], xlab = paste(names(temp)[x]," X",x,sep=""), breaks = (max(temp[,x])-min(temp[,x])+2) )
+}
+#par(mfrow=c(6,5))
+#x <-sapply(1:(dim(temp)[2]-1), plotY)
